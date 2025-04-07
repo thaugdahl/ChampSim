@@ -291,6 +291,15 @@ bool CACHE::handle_miss(const tag_lookup_type& handle_pkt)
   return true;
 }
 
+
+bool CACHE::hit_test(uint64_t addr)
+{
+  auto [set_begin, set_end] = get_set_span(addr);
+  auto way =
+      std::find_if(set_begin, set_end, [match = addr >> OFFSET_BITS, shamt = OFFSET_BITS](const auto& entry) { return (entry.address >> shamt) == match; });
+  return way != set_end;
+}
+
 bool CACHE::handle_write(const tag_lookup_type& handle_pkt)
 {
   if constexpr (champsim::debug_print) {
@@ -301,7 +310,7 @@ bool CACHE::handle_write(const tag_lookup_type& handle_pkt)
 
   inflight_writes.emplace_back(handle_pkt, current_cycle);
   inflight_writes.back().event_cycle = current_cycle + (warmup ? 0 : FILL_LATENCY);
-    
+
   ++sim_stats.misses[champsim::to_underlying(handle_pkt.type)][handle_pkt.cpu];
 
   return true;
